@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #0a0d14;
+    --bg-secondary: #0f1422;
+    --bg-tertiary: #171f33;
+    --border-subtle: #1e293b;
+    --accent-cyan: #06b6d4;
+    --accent-indigo: #6366f1;
+  }
+
+  body {
+    background-color: #07090e;
+    color: #e2e8f0;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
+  }
+
+  /* Custom subtle dark scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #334155;
+  }
+
+  .font-display {
+    font-family: 'Chakra Petch', sans-serif;
+  }
+
+  .font-mono-code {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+/* Glassmorphic card styling */
+.glass-panel {
+  background: rgba(15, 20, 34, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-subtle {
+  background: rgba(23, 31, 51, 0.55);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Subtle glow */
+.neon-glow-cyan {
+  box-shadow: 0 0 16px -4px rgba(6, 182, 212, 0.25);
+}
+
+.neon-glow-indigo {
+  box-shadow: 0 0 16px -4px rgba(99, 102, 241, 0.25);
+}
