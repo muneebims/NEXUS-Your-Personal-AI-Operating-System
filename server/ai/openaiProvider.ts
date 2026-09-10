@@ -27,13 +27,13 @@ export class OpenAIProvider implements AIProvider {
     options: GenerateOptions,
     callbacks: StreamCallbacks
   ): Promise<void> {
-    return this.service.streamChat(messages, options, callbacks);
+    return this.service.streamChat(messages, options, callbacks, false);
   }
 
   async generateResponse(
     messages: ChatMessageParam[],
     options: GenerateOptions
   ): Promise<{ text: string; toolCalls?: Array<{ id: string; name: string; arguments: any }> }> {
-    return this.service.generateResponse(messages, options);
+    return this.service.generateResponse(messages, options, false);
   }
 }

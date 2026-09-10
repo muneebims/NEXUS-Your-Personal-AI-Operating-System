@@ -41,7 +41,8 @@ export class GroqProvider implements AIProvider {
         ...options,
         model: options.model || this.getDefaultModel(),
       },
-      callbacks
+      callbacks,
+      true
     );
   }
 
@@ -49,9 +50,13 @@ export class GroqProvider implements AIProvider {
     messages: ChatMessageParam[],
     options: GenerateOptions
   ): Promise<{ text: string; toolCalls?: Array<{ id: string; name: string; arguments: any }> }> {
-    return this.service.generateResponse(messages, {
-      ...options,
-      model: options.model || this.getDefaultModel(),
-    });
+    return this.service.generateResponse(
+      messages,
+      {
+        ...options,
+        model: options.model || this.getDefaultModel(),
+      },
+      true
+    );
   }
 }

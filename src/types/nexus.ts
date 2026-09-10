@@ -80,6 +80,9 @@ export interface NexusToolDefinition {
   category: 'utility' | 'system' | 'computation' | 'data';
 }
 
+export type ThemeMode = 'midnight' | 'light' | 'cyber' | 'nebula' | 'matrix' | 'ember';
+export type AccentColor = 'cyan' | 'blue' | 'purple' | 'green' | 'orange' | 'pink';
+
 export interface AppSettings {
   provider: 'groq' | 'openai' | 'gemini' | 'custom';
   groqModel: string;
@@ -91,7 +94,8 @@ export interface AppSettings {
   agentMode: boolean;
   maxIterations: number;
   systemPrompt: string;
-  theme: 'dark';
+  theme: ThemeMode;
+  accent: AccentColor;
   toolPermissions: Record<string, boolean>;
 }
 

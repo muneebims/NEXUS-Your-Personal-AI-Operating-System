@@ -65,6 +65,7 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
   try {
     const {
       messages = [],
+      message,
       provider: requestedProvider,
       model,
       temperature = 0.7,
@@ -75,6 +76,42 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
       agentMode = false,
       toolPermissions = {},
     } = req.body;
+
+    // Ensure conversation includes the current message
+    const rawMessages = Array.isArray(messages) ? [...messages] : [];
+    if (typeof message === 'string' && message.trim().length > 0) {
+      const lastMsg = rawMessages[rawMessages.length - 1];
+      if (!lastMsg || lastMsg.role !== 'user' || lastMsg.content !== message.trim()) {
+        rawMessages.push({
+          role: 'user',
+          content: message.trim(),
+        });
+      }
+    }
+
+    // Validation: Return clear application error if input is empty
+    if (rawMessages.length === 0) {
+      sendEvent('error', {
+        error: 'Application error: Input must provide at least one message.',
+      });
+      res.end();
+      return;
+    }
+
+    const hasContent = rawMessages.some((m: any) => {
+      if (typeof m.content === 'string' && m.content.trim().length > 0) return true;
+      if (Array.isArray(m.content) && m.content.length > 0) return true;
+      if (m.attachments && m.attachments.length > 0) return true;
+      return false;
+    });
+
+    if (!hasContent) {
+      sendEvent('error', {
+        error: 'Application error: Input cannot be empty or whitespace.',
+      });
+      res.end();
+      return;
+    }
 
     const provider = ProviderFactory.getProvider(requestedProvider);
 
@@ -102,7 +139,7 @@ apiRouter.post('/chat', async (req: Request, res: Response) => {
     }
 
     // Convert client messages to server format
-    const serverMessages: ChatMessageParam[] = messages.map((m: any) => {
+    const serverMessages: ChatMessageParam[] = rawMessages.map((m: any) => {
       const images: Array<{ mimeType: string; data: string }> = [];
 
       if (m.attachments) {

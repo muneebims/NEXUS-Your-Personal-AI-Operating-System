@@ -5,10 +5,8 @@ import {
   Trash2,
   X,
   Search,
-  Filter,
   Check,
   Sparkles,
-  Info,
 } from 'lucide-react';
 import { MemoryItem } from '../types/nexus.js';
 
@@ -54,42 +52,82 @@ export const MemoryModal: React.FC<MemoryModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-2xl bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Memory Subsystem"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-2xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[85vh] transition-colors"
+        style={{
+          backgroundColor: 'var(--bg-surface)',
+          borderColor: 'var(--border-color)',
+          color: 'var(--text-primary)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div
+          className="px-6 py-4 border-b flex items-center justify-between"
+          style={{ borderColor: 'var(--border-color)' }}
+        >
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-indigo-950/80 text-indigo-400 border border-indigo-800/60">
+            <div
+              className="p-2 rounded-xl border"
+              style={{
+                backgroundColor: 'var(--accent-subtle)',
+                borderColor: 'var(--accent-color)',
+                color: 'var(--accent-color)',
+              }}
+            >
               <BrainCircuit className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-display font-bold text-white tracking-wide">
-                NEXUS Memory Subsystem
+              <h2 className="text-base font-bold tracking-wide">
+                NEXUS Memory
               </h2>
-              <p className="text-xs text-slate-400">
-                Persistent facts, instructions, and user preferences stored across sessions
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                {memories.length} saved facts, preferences, and project guidelines
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg hover:opacity-80 transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+            aria-label="Close Memory"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Action & Filter Bar */}
-        <div className="p-4 border-b border-slate-800/80 bg-slate-900/40 flex flex-wrap items-center justify-between gap-3">
+        <div
+          className="p-4 border-b flex flex-wrap items-center justify-between gap-3"
+          style={{
+            backgroundColor: 'var(--bg-surface-elevated)',
+            borderColor: 'var(--border-color)',
+          }}
+        >
           <div className="flex items-center gap-2 flex-1 min-w-[200px]">
             <div className="relative flex-1">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+              <Search
+                className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2"
+                style={{ color: 'var(--text-muted)' }}
+              />
               <input
                 type="text"
-                placeholder="Search remembered facts & preferences..."
+                placeholder="Search remembered facts..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500/50"
+                className="w-full pl-9 pr-3 py-1.5 rounded-lg border text-xs outline-none"
+                style={{
+                  backgroundColor: 'var(--bg-primary)',
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-primary)',
+                }}
               />
             </div>
 
@@ -98,12 +136,14 @@ export const MemoryModal: React.FC<MemoryModalProps> = ({
               {categories.map((cat) => (
                 <button
                   key={cat}
+                  type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] capitalize transition-colors ${
-                    selectedCategory === cat
-                      ? 'bg-indigo-950 text-indigo-300 border border-indigo-700/60'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
+                  className="px-2.5 py-1 rounded-lg text-[11px] capitalize transition-colors"
+                  style={{
+                    backgroundColor: selectedCategory === cat ? 'var(--accent-subtle)' : 'transparent',
+                    color: selectedCategory === cat ? 'var(--accent-color)' : 'var(--text-secondary)',
+                    border: selectedCategory === cat ? '1px solid var(--accent-color)' : '1px solid transparent',
+                  }}
                 >
                   {cat}
                 </button>
@@ -112,11 +152,13 @@ export const MemoryModal: React.FC<MemoryModalProps> = ({
           </div>
 
           <button
+            type="button"
             onClick={() => setIsAdding(!isAdding)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-90 shadow-sm"
+            style={{ backgroundColor: 'var(--accent-color)' }}
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Remember This</span>
+            <span>Add Memory</span>
           </button>
         </div>
 
@@ -124,101 +166,148 @@ export const MemoryModal: React.FC<MemoryModalProps> = ({
         {isAdding && (
           <form
             onSubmit={handleCreate}
-            className="p-4 bg-slate-900/80 border-b border-indigo-900/50 space-y-3 animate-fadeIn"
+            className="p-4 border-b space-y-3 animate-fadeIn"
+            style={{
+              backgroundColor: 'var(--bg-surface-elevated)',
+              borderColor: 'var(--border-color)',
+            }}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-indigo-300 flex items-center gap-1.5">
+              <span className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--accent-color)' }}>
                 <Sparkles className="w-3.5 h-3.5" /> Store New Memory
               </span>
               <button
                 type="button"
                 onClick={() => setIsAdding(false)}
-                className="text-slate-400 hover:text-white"
+                className="p-1 hover:opacity-80"
+                style={{ color: 'var(--text-muted)' }}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <input
-                type="text"
-                required
-                placeholder="Key / Title (e.g. Favorite Language)"
-                value={newKey}
-                onChange={(e) => setNewKey(e.target.value)}
-                className="sm:col-span-2 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-              />
-              <select
-                value={newCat}
-                onChange={(e) => setNewCat(e.target.value as any)}
-                className="px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none"
-              >
-                <option value="fact">Fact</option>
-                <option value="preference">Preference</option>
-                <option value="project">Project</option>
-                <option value="general">General</option>
-              </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                  Topic or Key Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Favorite Language, Project Tech Stack"
+                  value={newKey}
+                  onChange={(e) => setNewKey(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg border text-xs outline-none"
+                  style={{
+                    backgroundColor: 'var(--bg-primary)',
+                    borderColor: 'var(--border-color)',
+                    color: 'var(--text-primary)',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                  Category
+                </label>
+                <select
+                  value={newCat}
+                  onChange={(e) => setNewCat(e.target.value as any)}
+                  className="w-full px-3 py-1.5 rounded-lg border text-xs outline-none capitalize"
+                  style={{
+                    backgroundColor: 'var(--bg-primary)',
+                    borderColor: 'var(--border-color)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  <option value="fact">Fact</option>
+                  <option value="preference">Preference</option>
+                  <option value="project">Project</option>
+                  <option value="general">General</option>
+                </select>
+              </div>
             </div>
 
-            <textarea
-              required
-              rows={2}
-              placeholder="Value / Detail to remember..."
-              value={newValue}
-              onChange={(e) => setNewValue(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-indigo-500"
-            />
+            <div>
+              <label className="block text-[11px] font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>
+                Fact or Guideline Description
+              </label>
+              <textarea
+                rows={2}
+                placeholder="e.g. Always generate responses using modern TypeScript and responsive layout"
+                value={newValue}
+                onChange={(e) => setNewValue(e.target.value)}
+                className="w-full px-3 py-1.5 rounded-lg border text-xs outline-none"
+                style={{
+                  backgroundColor: 'var(--bg-primary)',
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-primary)',
+                }}
+              />
+            </div>
 
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setIsAdding(false)}
-                className="px-3 py-1 rounded-lg text-xs text-slate-400 hover:text-slate-200"
+                className="px-3 py-1.5 rounded-lg border text-xs hover:opacity-80"
+                style={{ borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: 'var(--accent-color)' }}
               >
-                Save to Memory
+                Save Fact
               </button>
             </div>
           </form>
         )}
 
-        {/* Memory Items List */}
+        {/* Memory List */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
           {filtered.length === 0 ? (
-            <div className="text-center py-12 text-slate-500 text-xs">
-              No memories recorded in this category. Use "Remember this" to persist key facts.
+            <div className="py-12 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
+              {search ? 'No matching memories' : 'No memories saved yet. Click "Add Memory" to create one.'}
             </div>
           ) : (
-            filtered.map((mem) => (
+            filtered.map((m) => (
               <div
-                key={mem.id}
-                className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 flex items-start justify-between gap-4 group transition-all"
+                key={m.id}
+                className="p-3.5 rounded-xl border flex items-start justify-between gap-3 transition-colors"
+                style={{
+                  backgroundColor: 'var(--bg-surface-elevated)',
+                  borderColor: 'var(--border-color)',
+                }}
               >
                 <div className="space-y-1 min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-slate-100">{mem.key}</span>
-                    <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-800/60 uppercase">
-                      {mem.category}
+                    <span className="font-semibold text-xs truncate">{m.key}</span>
+                    <span
+                      className="px-2 py-0.2 rounded-full text-[10px] uppercase font-mono"
+                      style={{
+                        backgroundColor: 'var(--accent-subtle)',
+                        color: 'var(--accent-color)',
+                      }}
+                    >
+                      {m.category}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 leading-relaxed">{mem.value}</p>
-                  <span className="text-[10px] font-mono text-slate-600 block">
-                    Recorded {new Date(mem.createdAt).toLocaleDateString()}
-                  </span>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                    {m.value}
+                  </p>
                 </div>
 
-                {/* Forget This Button */}
                 <button
-                  onClick={() => onDeleteMemory(mem.id)}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition-colors shrink-0"
-                  title="Forget this memory"
+                  type="button"
+                  onClick={() => onDeleteMemory(m.id)}
+                  className="p-1.5 rounded-lg hover:opacity-80 transition-colors shrink-0"
+                  style={{ color: 'var(--text-muted)' }}
+                  title="Delete memory"
+                  aria-label={`Delete memory ${m.key}`}
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5 hover:text-rose-400" />
                 </button>
               </div>
             ))
@@ -226,20 +315,33 @@ export const MemoryModal: React.FC<MemoryModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="px-6 py-3 border-t border-slate-800 bg-slate-900/30 flex items-center justify-between text-xs text-slate-500">
-          <span>{memories.length} total memories stored</span>
-          {memories.length > 0 && (
-            <button
-              onClick={() => {
-                if (confirm('Clear all stored memories?')) {
-                  onClearMemories();
-                }
-              }}
-              className="text-rose-400 hover:text-rose-300 text-xs transition-colors"
-            >
-              Clear all memories
-            </button>
-          )}
+        <div
+          className="px-6 py-3.5 border-t flex items-center justify-between"
+          style={{
+            backgroundColor: 'var(--bg-surface-elevated)',
+            borderColor: 'var(--border-color)',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm('Clear all stored memories?')) {
+                onClearMemories();
+              }
+            }}
+            className="text-xs text-rose-400 hover:underline"
+          >
+            Clear All Memories
+          </button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl text-xs font-medium text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: 'var(--accent-color)' }}
+          >
+            Done
+          </button>
         </div>
       </div>
     </div>

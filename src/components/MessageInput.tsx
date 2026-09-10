@@ -8,10 +8,7 @@ import {
   Square,
   X,
   FileText,
-  Wrench,
-  Sparkles,
-  Search,
-  CheckCircle,
+  AlertCircle,
 } from 'lucide-react';
 import { FileAttachment } from '../types/nexus.js';
 import { processUploadedFile, isSupportedFile } from '../services/fileProcessor.js';
@@ -41,13 +38,13 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const imageInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto resize textarea
+  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${Math.min(
         textareaRef.current.scrollHeight,
-        220
+        200
       )}px`;
     }
   }, [text]);
@@ -103,11 +100,6 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     setAttachments((prev) => prev.filter((a) => a.id !== id));
   };
 
-  const handleApplyPromptPreset = (prompt: string) => {
-    setText((prev) => (prev ? `${prev} ${prompt}` : prompt));
-    textareaRef.current?.focus();
-  };
-
   const toggleVoice = () => {
     if (isListening) {
       speechService.stopListening();
@@ -129,222 +121,210 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     }
   };
 
-  const hasImages = attachments.some((a) => a.type.startsWith('image/'));
-
   return (
     <div
       id="nexus-message-input-container"
-      className="p-4 bg-slate-950/90 border-t border-slate-800/80 backdrop-blur-lg shrink-0 relative"
+      className="p-3 sm:p-4 border-t backdrop-blur-lg shrink-0 transition-colors"
+      style={{
+        backgroundColor: 'var(--bg-surface)',
+        borderColor: 'var(--border-color)',
+      }}
     >
-      <div className="max-w-4xl mx-auto space-y-2">
-        {/* Upload error banner if any */}
+      <div className="max-w-3xl mx-auto space-y-2">
+        {/* Error message if upload failed */}
         {uploadError && (
-          <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-rose-950/50 border border-rose-800/60 text-xs text-rose-300 animate-fadeIn">
-            <span>{uploadError}</span>
+          <div
+            className="flex items-center justify-between p-2 rounded-lg text-xs"
+            style={{
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              color: 'var(--color-error)',
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{uploadError}</span>
+            </div>
             <button
               onClick={() => setUploadError(null)}
-              className="text-rose-400 hover:text-white"
+              className="p-1 hover:opacity-80"
+              aria-label="Dismiss error"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
 
-        {/* Image Understanding Quick Prompt Chips */}
-        {hasImages && (
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-            <span className="text-[11px] font-mono text-cyan-400 flex items-center gap-1 shrink-0">
-              <Sparkles className="w-3 h-3" /> Vision Actions:
-            </span>
-            <button
-              onClick={() => handleApplyPromptPreset('Analyze this image in detail and describe its key elements.')}
-              className="px-2.5 py-1 rounded-full bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-800/60 text-cyan-300 hover:text-cyan-100 text-[11px] whitespace-nowrap transition-colors"
-            >
-              Analyze image
-            </button>
-            <button
-              onClick={() => handleApplyPromptPreset("Explain what's in this image and its significance.")}
-              className="px-2.5 py-1 rounded-full bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-800/60 text-cyan-300 hover:text-cyan-100 text-[11px] whitespace-nowrap transition-colors"
-            >
-              Explain what's in this image
-            </button>
-            <button
-              onClick={() => handleApplyPromptPreset('Inspect this image carefully and find any potential problems, anomalies, or errors.')}
-              className="px-2.5 py-1 rounded-full bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-800/60 text-cyan-300 hover:text-cyan-100 text-[11px] whitespace-nowrap transition-colors"
-            >
-              Find problems
-            </button>
-            <button
-              onClick={() => handleApplyPromptPreset('Extract and transcribe all visible text from this image.')}
-              className="px-2.5 py-1 rounded-full bg-cyan-950/50 hover:bg-cyan-900/60 border border-cyan-800/60 text-cyan-300 hover:text-cyan-100 text-[11px] whitespace-nowrap transition-colors"
-            >
-              Read text
-            </button>
-          </div>
-        )}
-
-        {/* Attached Files / Images Preview Strip */}
+        {/* Attachment chips */}
         {attachments.length > 0 && (
-          <div className="flex items-center gap-2 flex-wrap pb-1">
-            {attachments.map((att) => {
-              const isImg = att.type.startsWith('image/');
-              return (
-                <div
-                  key={att.id}
-                  className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700/80 text-xs text-slate-200 group"
+          <div className="flex flex-wrap gap-2 pt-1">
+            {attachments.map((att) => (
+              <div
+                key={att.id}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs border"
+                style={{
+                  backgroundColor: 'var(--bg-surface-elevated)',
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                <FileText className="w-3.5 h-3.5" style={{ color: 'var(--accent-color)' }} />
+                <span className="max-w-[160px] truncate">{att.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removeAttachment(att.id)}
+                  className="p-0.5 rounded hover:opacity-80"
+                  style={{ color: 'var(--text-muted)' }}
+                  aria-label={`Remove attachment ${att.name}`}
                 >
-                  {isImg && att.base64 ? (
-                    <img
-                      src={att.base64}
-                      alt={att.name}
-                      className="w-6 h-6 rounded object-cover border border-cyan-500/30"
-                    />
-                  ) : (
-                    <FileText className="w-4 h-4 text-cyan-400" />
-                  )}
-                  <span className="font-mono text-[11px] max-w-[140px] truncate">
-                    {att.name}
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-mono">
-                    ({Math.round(att.size / 1024)}KB)
-                  </span>
-                  <button
-                    onClick={() => removeAttachment(att.id)}
-                    className="text-slate-400 hover:text-rose-400 ml-1"
-                    title="Remove attachment"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              );
-            })}
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Main Input Box Card */}
-        <div className="relative rounded-2xl bg-slate-900/90 border border-slate-800 focus-within:border-cyan-500/50 focus-within:ring-1 focus-within:ring-cyan-500/30 shadow-2xl transition-all">
+        {/* Input Box Card */}
+        <div
+          className="rounded-2xl border transition-all shadow-sm focus-within:ring-1"
+          style={{
+            backgroundColor: 'var(--bg-surface-elevated)',
+            borderColor: 'var(--border-color)',
+          }}
+        >
+          {/* Expanding Textarea */}
           <textarea
-            id="nexus-prompt-textarea"
             ref={textareaRef}
-            rows={2}
+            rows={1}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              isListening
-                ? 'Listening to voice command... (speak now)'
-                : 'Message NEXUS OS... Ask a question, run a tool, or attach files/images...'
+              isStreaming
+                ? 'NEXUS is generating an answer...'
+                : 'Ask NEXUS anything, upload files, or request tasks...'
             }
-            className="w-full px-4 pt-3 pb-12 bg-transparent text-sm text-slate-100 placeholder-slate-500 focus:outline-none resize-none leading-relaxed"
+            className="w-full px-4 pt-3.5 pb-2 rounded-t-2xl resize-none text-xs sm:text-sm outline-none transition-colors"
+            style={{
+              backgroundColor: 'transparent',
+              color: 'var(--text-primary)',
+            }}
+            aria-label="Message input field"
           />
 
-          {/* Bottom Toolbar inside card */}
-          <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between pointer-events-none">
-            {/* Left Action Buttons */}
-            <div className="flex items-center gap-1.5 pointer-events-auto">
-              {/* File Upload Button */}
+          {/* Action Row */}
+          <div className="px-3 pb-2.5 flex items-center justify-between">
+            {/* Left Controls: Attachments + Voice */}
+            <div className="flex items-center gap-1">
+              {/* File Attachment */}
               <input
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept=".txt,.pdf,.docx,.csv,.json,.py,.java,.js,.jsx,.ts,.tsx,.html,.css,.md"
-                onChange={handleFileChange}
                 className="hidden"
+                onChange={handleFileChange}
+                accept=".txt,.md,.json,.csv,.js,.ts,.tsx,.py,.html,.css,.xml,.yaml,.yml,.pdf"
               />
               <button
-                id="input-attach-file-btn"
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors"
-                title="Attach supported files (TXT, PDF, DOCX, CSV, JSON, Python, Java, JS, TS, HTML, CSS)"
+                className="p-2 rounded-lg transition-colors hover:bg-slate-800/20"
+                style={{ color: 'var(--text-secondary)' }}
+                title="Attach document or file"
+                aria-label="Attach document or file"
               >
                 <Paperclip className="w-4 h-4" />
               </button>
 
-              {/* Image Upload Button */}
+              {/* Image Attachment */}
               <input
                 ref={imageInputRef}
                 type="file"
-                accept="image/*"
-                onChange={handleFileChange}
+                multiple
                 className="hidden"
+                onChange={handleFileChange}
+                accept="image/*"
               />
               <button
-                id="input-upload-image-btn"
                 type="button"
                 onClick={() => imageInputRef.current?.click()}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors"
-                title="Upload image for multimodal vision understanding"
+                className="p-2 rounded-lg transition-colors hover:bg-slate-800/20"
+                style={{ color: 'var(--text-secondary)' }}
+                title="Attach image"
+                aria-label="Attach image"
               >
                 <ImageIcon className="w-4 h-4" />
               </button>
 
-              {/* Voice Placeholder / Speech Recognition Button */}
+              {/* Voice Speech to Text */}
               <button
-                id="input-voice-btn"
                 type="button"
                 onClick={toggleVoice}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  isListening
-                    ? 'bg-rose-950/80 text-rose-400 animate-pulse border border-rose-600/50'
-                    : 'text-slate-400 hover:text-cyan-300 hover:bg-slate-800'
-                }`}
-                title={
-                  isListening
-                    ? 'Click to stop listening'
-                    : 'Voice input (Speech recognition & voice control)'
-                }
+                className="p-2 rounded-lg transition-colors hover:bg-slate-800/20"
+                style={{
+                  color: isListening ? 'var(--color-error)' : 'var(--text-secondary)',
+                }}
+                title={isListening ? 'Stop voice recording' : 'Dictate with voice'}
+                aria-label={isListening ? 'Stop recording voice' : 'Start voice input'}
               >
-                {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                {isListening ? (
+                  <MicOff className="w-4 h-4 animate-pulse" />
+                ) : (
+                  <Mic className="w-4 h-4" />
+                )}
               </button>
 
-              {/* Tool status indicator */}
+              {/* Active Tools shortcut */}
               <button
-                id="input-tool-status-btn"
                 type="button"
                 onClick={onOpenTools}
-                className="hidden sm:flex items-center gap-1.5 ml-2 px-2 py-1 rounded-md bg-slate-950/70 border border-slate-800 text-[11px] text-slate-400 hover:text-cyan-300 hover:border-slate-700 transition-colors"
-                title="Click to view & configure active tools"
+                className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium transition-colors hover:opacity-80"
+                style={{
+                  backgroundColor: 'var(--bg-surface)',
+                  color: 'var(--text-muted)',
+                }}
+                title="View enabled tools"
+                aria-label="View enabled tools"
               >
-                <Wrench className="w-3 h-3 text-cyan-400" />
-                <span>{activeToolsCount} Tools Active</span>
+                <span>Tools:</span>
+                <span style={{ color: 'var(--accent-color)' }}>{activeToolsCount} active</span>
               </button>
             </div>
 
-            {/* Right Action: Send or Stop */}
-            <div className="flex items-center gap-2 pointer-events-auto">
-              <span className="hidden md:inline text-[10px] font-mono text-slate-400">
-                Press Enter ↵
-              </span>
-
+            {/* Right: Send or Stop Button */}
+            <div className="flex items-center gap-2">
               {isStreaming ? (
                 <button
-                  id="input-stop-btn"
                   type="button"
                   onClick={onStopGeneration}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs shadow-[0_0_12px_-2px_rgba(225,29,72,0.4)] transition-all cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-medium text-xs text-white shadow-sm hover:opacity-90 transition-opacity"
+                  style={{ backgroundColor: 'var(--color-error)' }}
+                  aria-label="Stop generation"
                 >
                   <Square className="w-3.5 h-3.5 fill-current" />
                   <span>Stop</span>
                 </button>
               ) : (
                 <button
-                  id="input-send-btn"
                   type="button"
                   onClick={handleSend}
                   disabled={!text.trim() && attachments.length === 0}
-                  className={`flex items-center justify-center p-2 rounded-xl text-xs font-medium transition-all ${
-                    text.trim() || attachments.length > 0
-                      ? 'bg-gradient-to-r from-cyan-500 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-white shadow-[0_0_15px_-3px_rgba(6,182,212,0.4)] cursor-pointer'
-                      : 'bg-slate-800 text-slate-400 cursor-not-allowed'
-                  }`}
-                  title="Send message to NEXUS"
+                  className="p-2 sm:px-3.5 sm:py-1.5 rounded-xl font-medium text-xs text-white shadow-sm transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
+                  style={{ backgroundColor: 'var(--accent-color)' }}
+                  aria-label="Send message"
                 >
-                  <Send className="w-4 h-4" />
+                  <span className="hidden sm:inline mr-1">Send</span>
+                  <Send className="w-3.5 h-3.5 inline" />
                 </button>
               )}
             </div>
           </div>
+        </div>
+
+        <div
+          className="hidden sm:flex items-center justify-center text-[11px]"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          <span>Press Enter to send &bull; Shift + Enter for new line</span>
         </div>
       </div>
     </div>

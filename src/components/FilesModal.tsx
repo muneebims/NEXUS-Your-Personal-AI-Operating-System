@@ -9,7 +9,6 @@ import {
   FileSpreadsheet,
   MessageSquare,
   Search,
-  ExternalLink,
 } from 'lucide-react';
 import { FileAttachment } from '../types/nexus.js';
 
@@ -45,84 +44,146 @@ export const FilesModal: React.FC<FilesModalProps> = ({
     URL.revokeObjectURL(url);
   };
 
+  const getFileIcon = (file: FileAttachment) => {
+    if (file.type.includes('csv') || file.type.includes('spreadsheet')) {
+      return <FileSpreadsheet className="w-4 h-4" style={{ color: 'var(--accent-color)' }} />;
+    }
+    if (file.type.includes('javascript') || file.type.includes('typescript') || file.type.includes('python')) {
+      return <Code2 className="w-4 h-4" style={{ color: 'var(--accent-color)' }} />;
+    }
+    return <FileText className="w-4 h-4" style={{ color: 'var(--accent-color)' }} />;
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-4xl bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[85vh]">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Files Workspace"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-4xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col h-[85vh] transition-colors"
+        style={{
+          backgroundColor: 'var(--bg-surface)',
+          borderColor: 'var(--border-color)',
+          color: 'var(--text-primary)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div
+          className="px-6 py-4 border-b flex items-center justify-between"
+          style={{ borderColor: 'var(--border-color)' }}
+        >
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-cyan-950/80 text-cyan-400 border border-cyan-800/60">
+            <div
+              className="p-2 rounded-xl border"
+              style={{
+                backgroundColor: 'var(--accent-subtle)',
+                borderColor: 'var(--accent-color)',
+                color: 'var(--accent-color)',
+              }}
+            >
               <FolderArchive className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-display font-bold text-white tracking-wide">
-                NEXUS File Workspace
+              <h2 className="text-base font-bold tracking-wide">
+                NEXUS Files
               </h2>
-              <p className="text-xs text-slate-400">
-                Uploaded code, documents, spreadsheets, and vision assets
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                {files.length} uploaded files available for document inspection and summary
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg hover:opacity-80 transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+            aria-label="Close Files"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Modal Body: Left Files List, Right Inspector */}
+        {/* Modal Body */}
         <div className="flex-1 flex overflow-hidden">
-          {/* File List Pane */}
-          <div className="w-72 border-r border-slate-800/80 flex flex-col bg-slate-950">
-            <div className="p-3 border-b border-slate-800/60">
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
-                  type="text"
-                  placeholder="Filter files..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 placeholder-slate-500 focus:outline-none"
-                />
-              </div>
+          {/* File list column */}
+          <div
+            className="w-72 sm:w-80 border-r flex flex-col p-3 space-y-2 overflow-y-auto"
+            style={{
+              backgroundColor: 'var(--bg-surface)',
+              borderColor: 'var(--border-color)',
+            }}
+          >
+            <div className="relative">
+              <Search
+                className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2"
+                style={{ color: 'var(--text-muted)' }}
+              />
+              <input
+                type="text"
+                placeholder="Search files..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 rounded-lg border text-xs outline-none"
+                style={{
+                  backgroundColor: 'var(--bg-primary)',
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-primary)',
+                }}
+              />
             </div>
 
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+            <div className="flex-1 space-y-1 pt-1">
               {filtered.length === 0 ? (
-                <div className="text-center py-10 text-xs text-slate-500">
-                  No files uploaded.
+                <div className="py-8 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {search ? 'No matching files' : 'No uploaded files in this session.'}
                 </div>
               ) : (
-                filtered.map((f) => {
-                  const isSelected = selectedFile?.id === f.id;
-                  const isImg = f.type.startsWith('image/');
+                filtered.map((file) => {
+                  const isSelected = selectedFile?.id === file.id;
 
                   return (
                     <div
-                      key={f.id}
-                      onClick={() => setSelectedFile(f)}
-                      className={`flex items-center justify-between p-2 rounded-lg text-xs cursor-pointer border transition-all ${
-                        isSelected
-                          ? 'bg-cyan-950/40 border-cyan-500/50 text-cyan-200'
-                          : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
-                      }`}
+                      key={file.id}
+                      onClick={() => setSelectedFile(file)}
+                      className="p-2.5 rounded-xl border text-xs cursor-pointer transition-all flex items-center justify-between"
+                      style={{
+                        backgroundColor: isSelected
+                          ? 'var(--accent-subtle)'
+                          : 'var(--bg-surface-elevated)',
+                        borderColor: isSelected
+                          ? 'var(--accent-color)'
+                          : 'var(--border-color)',
+                      }}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
-                        {isImg ? (
-                          <span className="w-4 h-4 rounded bg-cyan-900/50 text-cyan-400 flex items-center justify-center text-[10px] font-mono">
-                            IMG
+                        {getFileIcon(file)}
+                        <div className="min-w-0 flex-1">
+                          <span className="font-medium block truncate">{file.name}</span>
+                          <span className="text-[10px] block truncate" style={{ color: 'var(--text-muted)' }}>
+                            {(file.size / 1024).toFixed(1)} KB
                           </span>
-                        ) : (
-                          <FileText className="w-4 h-4 text-cyan-400 shrink-0" />
-                        )}
-                        <span className="truncate font-mono text-[11px]">
-                          {f.name}
-                        </span>
+                        </div>
                       </div>
-                      <span className="text-[10px] font-mono text-slate-500 shrink-0 ml-1">
-                        {Math.round(f.size / 1024)}KB
-                      </span>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteFile(file.id);
+                          if (selectedFile?.id === file.id) {
+                            setSelectedFile(files.filter((f) => f.id !== file.id)[0] || null);
+                          }
+                        }}
+                        className="p-1 hover:opacity-80 transition-colors ml-1"
+                        style={{ color: 'var(--text-muted)' }}
+                        title="Delete file"
+                        aria-label={`Delete ${file.name}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5 hover:text-rose-400" />
+                      </button>
                     </div>
                   );
                 })
@@ -130,79 +191,91 @@ export const FilesModal: React.FC<FilesModalProps> = ({
             </div>
           </div>
 
-          {/* File Inspector Preview Pane */}
-          <div className="flex-1 flex flex-col bg-slate-900/40 overflow-hidden">
+          {/* File Content Preview Column */}
+          <div
+            className="flex-1 flex flex-col overflow-y-auto p-5 space-y-4"
+            style={{ backgroundColor: 'var(--bg-primary)' }}
+          >
             {selectedFile ? (
-              <div className="flex-1 flex flex-col overflow-hidden">
-                {/* File Header */}
-                <div className="px-5 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
-                  <div className="space-y-0.5">
-                    <h3 className="font-mono text-xs font-semibold text-slate-200">
-                      {selectedFile.name}
-                    </h3>
-                    <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400">
-                      <span>Type: {selectedFile.type || 'plain text'}</span>
-                      <span>•</span>
-                      <span>Size: {Math.round(selectedFile.size / 1024)} KB</span>
-                    </div>
+              <>
+                <div
+                  className="p-4 rounded-xl border flex items-center justify-between"
+                  style={{
+                    backgroundColor: 'var(--bg-surface)',
+                    borderColor: 'var(--border-color)',
+                  }}
+                >
+                  <div>
+                    <h3 className="font-semibold text-sm">{selectedFile.name}</h3>
+                    <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                      Format: {selectedFile.type || 'text/plain'} &bull; {(selectedFile.size / 1024).toFixed(1)} KB
+                    </span>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <button
+                      type="button"
+                      onClick={() => handleDownload(selectedFile)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium hover:opacity-80 transition-colors"
+                      style={{
+                        borderColor: 'var(--border-color)',
+                        color: 'var(--text-primary)',
+                      }}
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download</span>
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => {
                         onAskAboutFile(selectedFile);
                         onClose();
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-90 shadow-sm"
+                      style={{ backgroundColor: 'var(--accent-color)' }}
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
-                      <span>Ask NEXUS</span>
-                    </button>
-
-                    <button
-                      onClick={() => handleDownload(selectedFile)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-                      title="Download file"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        onDeleteFile(selectedFile.id);
-                        setSelectedFile(null);
-                      }}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
-                      title="Delete file"
-                    >
-                      <Trash2 className="w-4 h-4" />
+                      <span>Ask About This File</span>
                     </button>
                   </div>
                 </div>
 
-                {/* File Content Preview */}
-                <div className="flex-1 overflow-auto p-4 font-mono-code text-xs">
-                  {selectedFile.type.startsWith('image/') && selectedFile.base64 ? (
-                    <div className="flex flex-col items-center justify-center h-full p-4">
-                      <img
-                        src={selectedFile.base64}
-                        alt={selectedFile.name}
-                        className="max-h-96 max-w-full rounded-xl border border-slate-800 shadow-2xl object-contain"
-                      />
-                    </div>
-                  ) : (
-                    <pre className="text-slate-300 leading-relaxed whitespace-pre-wrap">
-                      {selectedFile.content || '(File is empty)'}
-                    </pre>
-                  )}
+                <div
+                  className="p-4 rounded-xl border flex-1 overflow-auto font-mono text-xs leading-relaxed"
+                  style={{
+                    backgroundColor: 'var(--bg-surface)',
+                    borderColor: 'var(--border-color)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  <pre className="whitespace-pre-wrap">{selectedFile.content}</pre>
                 </div>
-              </div>
+              </>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-xs">
-                Select a file to inspect its content and metadata.
+              <div className="flex-1 flex items-center justify-center text-xs" style={{ color: 'var(--text-muted)' }}>
+                Select a file to preview its content
               </div>
             )}
           </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div
+          className="px-6 py-3 border-t flex justify-end"
+          style={{
+            backgroundColor: 'var(--bg-surface-elevated)',
+            borderColor: 'var(--border-color)',
+          }}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl text-xs font-medium text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: 'var(--accent-color)' }}
+          >
+            Close Files
+          </button>
         </div>
       </div>
     </div>

@@ -16,7 +16,7 @@ export class OpenAIService {
   }
 
   getApiKey(): string | undefined {
-    return process.env.OPENAI_API_KEY;
+    return process.env.OPENAI_API_KEY || process.env.GROQ_API_KEY;
   }
 
   isGroq(requestedProvider?: string): boolean {
@@ -34,7 +34,7 @@ export class OpenAIService {
     if (rawUrl) {
       return rawUrl.replace(/\/+$/, '');
     }
-    // When Groq is selected or detected, NEVER send requests to api.openai.com
+    // For Groq, base URL is https://api.groq.com/openai/v1
     if (isGroqContext || this.isGroq()) {
       return 'https://api.groq.com/openai/v1';
     }
@@ -63,14 +63,21 @@ export class OpenAIService {
   }
 
   /**
-   * Format messages for the OpenAI Responses API (`input` parameter)
+   * Format messages for the OpenAI / Groq Responses API (`input` parameter).
+   * Supports:
+   * - Single message: returns plain string (e.g. "hi")
+   * - Multi-turn conversation: returns array of { role, content } objects
    */
-  private formatResponsesInput(messages: ChatMessageParam[]): any[] {
+  formatResponsesInput(messages: ChatMessageParam[]): any {
+    if (!messages || messages.length === 0) {
+      return '';
+    }
+
     const inputItems: any[] = [];
 
     for (const msg of messages) {
       if (msg.role === 'system') {
-        // System instructions are passed separately in `instructions`
+        // System instructions are passed separately via `instructions` parameter
         continue;
       }
 
@@ -78,7 +85,7 @@ export class OpenAIService {
         inputItems.push({
           type: 'function_call_output',
           call_id: msg.toolCallId || 'call_default',
-          output: msg.content,
+          output: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
         });
         continue;
       }
@@ -96,14 +103,66 @@ export class OpenAIService {
           content: contentParts,
         });
       } else {
+        const textContent = typeof msg.content === 'string' ? msg.content : String(msg.content ?? '');
         inputItems.push({
           role: msg.role === 'assistant' ? 'assistant' : 'user',
-          content: msg.content,
+          content: textContent,
         });
       }
     }
 
+    // If there is only one user message and no multimodal attachments, format directly as string
+    // e.g. { "model": "openai/gpt-oss-20b", "input": "hi" }
+    if (
+      inputItems.length === 1 &&
+      inputItems[0].role === 'user' &&
+      typeof inputItems[0].content === 'string'
+    ) {
+      return inputItems[0].content;
+    }
+
     return inputItems;
+  }
+
+  /**
+   * Validation before calling Groq:
+   * If final input is empty, whitespace, null, or undefined:
+   * returns a clear application error message.
+   */
+  validateResponsesInput(input: any): string | null {
+    if (input === null || input === undefined) {
+      return 'Application error: Input is required but was null or undefined.';
+    }
+
+    if (typeof input === 'string') {
+      if (input.trim().length === 0) {
+        return 'Application error: Input cannot be empty or whitespace.';
+      }
+      return null;
+    }
+
+    if (Array.isArray(input)) {
+      if (input.length === 0) {
+        return 'Application error: Input conversation history is empty. Please provide a message.';
+      }
+
+      const hasContent = input.some((item) => {
+        if (!item) return false;
+        if (typeof item === 'string') return item.trim().length > 0;
+        if (typeof item.content === 'string') return item.content.trim().length > 0;
+        if (Array.isArray(item.content) && item.content.length > 0) return true;
+        if (item.type === 'function_call_output' && item.output) return true;
+        return false;
+      });
+
+      if (!hasContent) {
+        return 'Application error: Input messages cannot all be empty or whitespace.';
+      }
+
+      return null;
+    }
+
+    return 'Application error: Invalid input format.';
   }
 
   /**
@@ -169,33 +228,47 @@ export class OpenAIService {
   }
 
   /**
-   * Primary method: Stream using OpenAI Responses API (`/v1/responses`)
+   * Primary method: Stream using OpenAI / Groq Responses API (`/v1/responses`)
    * with automatic fallback to `/v1/chat/completions` if the endpoint is not yet supported
    */
   async streamChat(
     messages: ChatMessageParam[],
     options: GenerateOptions,
-    callbacks: StreamCallbacks
+    callbacks: StreamCallbacks,
+    isGroqContext: boolean = true
   ): Promise<void> {
     const apiKey = this.getApiKey();
     if (!apiKey) {
       const err = new Error(
-        'OPENAI_API_KEY is not configured on the server. Please add your OpenAI API key to your environment variables.'
+        'OPENAI_API_KEY is not configured on the server. Please add your API key to your environment variables.'
       );
       callbacks.onError(err);
       return;
     }
 
-    const baseUrl = this.getBaseUrl();
+    const baseUrl = this.getBaseUrl(isGroqContext);
     const model = options.model || this.getDefaultModel();
     const responsesUrl = baseUrl.endsWith('/v1')
       ? `${baseUrl}/responses`
       : `${baseUrl}/v1/responses`;
 
+    // 1. Format input for Responses API
+    const input = this.formatResponsesInput(messages);
+
+    // 2. Add validation before calling Groq:
+    // If the final input is empty, whitespace, null, or undefined:
+    // return a clear application error instead of sending the request.
+    const validationError = this.validateResponsesInput(input);
+    if (validationError) {
+      callbacks.onError(new Error(validationError));
+      return;
+    }
+
+    // 3. Construct Responses API payload with input field (NOT messages, prompt, content, or text)
     const responsesPayload: any = {
       model,
       instructions: options.systemInstruction || 'You are NEXUS, a modular personal AI operating system.',
-      input: this.formatResponsesInput(messages),
+      input,
       stream: true,
       temperature: options.temperature ?? 0.7,
     };
@@ -221,7 +294,7 @@ export class OpenAIService {
       });
     } catch (networkErr: any) {
       callbacks.onError(
-        new Error(`Failed to connect to OpenAI endpoint at ${responsesUrl}: ${networkErr.message}`)
+        new Error(`Failed to connect to API endpoint at ${responsesUrl}: ${networkErr.message}`)
       );
       return;
     }
@@ -232,7 +305,7 @@ export class OpenAIService {
       return this.streamChatCompletionsFallback(messages, options, callbacks, apiKey, baseUrl, model);
     }
 
-    const isGroqProvider = this.isGroq();
+    const isGroqProvider = isGroqContext || this.isGroq();
     const providerLabel = isGroqProvider ? 'Groq' : 'OpenAI';
 
     if (!response.ok) {
@@ -509,27 +582,38 @@ export class OpenAIService {
   }
 
   /**
-   * Non-streaming request using OpenAI Responses API
+   * Non-streaming request using OpenAI / Groq Responses API
    */
   async generateResponse(
     messages: ChatMessageParam[],
-    options: GenerateOptions
+    options: GenerateOptions,
+    isGroqContext: boolean = true
   ): Promise<{ text: string; toolCalls?: Array<{ id: string; name: string; arguments: any }> }> {
     const apiKey = this.getApiKey();
     if (!apiKey) {
       throw new Error('OPENAI_API_KEY is not configured on the server.');
     }
 
-    const baseUrl = this.getBaseUrl();
+    const baseUrl = this.getBaseUrl(isGroqContext);
     const model = options.model || this.getDefaultModel();
     const responsesUrl = baseUrl.endsWith('/v1')
       ? `${baseUrl}/responses`
       : `${baseUrl}/v1/responses`;
 
+    // 1. Format input for Responses API
+    const input = this.formatResponsesInput(messages);
+
+    // 2. Validate input before calling Groq / OpenAI
+    const validationError = this.validateResponsesInput(input);
+    if (validationError) {
+      throw new Error(validationError);
+    }
+
+    // 3. Construct payload with input field
     const responsesPayload: any = {
       model,
       instructions: options.systemInstruction || 'You are NEXUS, a modular personal AI operating system.',
-      input: this.formatResponsesInput(messages),
+      input,
       temperature: options.temperature ?? 0.7,
     };
 
@@ -551,9 +635,12 @@ export class OpenAIService {
       return this.generateChatCompletionsFallback(messages, options, apiKey, baseUrl, model);
     }
 
+    const isGroqProvider = isGroqContext || this.isGroq();
+    const providerLabel = isGroqProvider ? 'Groq' : 'OpenAI';
+
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`OpenAI API error (${res.status}): ${err}`);
+      throw new Error(`${providerLabel} API error (${res.status}): ${err}`);
     }
 
     const data = await res.json();
@@ -566,7 +653,9 @@ export class OpenAIService {
       for (const item of data.output) {
         if (item.type === 'message' && Array.isArray(item.content)) {
           for (const part of item.content) {
-            if (part.type === 'text') text += part.text || '';
+            if (part.type === 'output_text' || part.type === 'text') {
+              text += part.text || '';
+            }
           }
         } else if (item.type === 'function_call') {
           let args = {};

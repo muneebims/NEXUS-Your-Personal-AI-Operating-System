@@ -2,22 +2,161 @@
 
 @layer base {
   :root {
-    --bg-primary: #0a0d14;
-    --bg-secondary: #0f1422;
-    --bg-tertiary: #171f33;
-    --border-subtle: #1e293b;
-    --accent-cyan: #06b6d4;
-    --accent-indigo: #6366f1;
+    /* Default: Midnight theme */
+    --bg-primary: #070a13;
+    --bg-surface: #0e1424;
+    --bg-surface-elevated: #151d34;
+    --bg-surface-hover: #1c2744;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border-color: #1e293b;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+    
+    /* Semantic Colors */
+    --color-success: #10b981;
+    --color-warning: #f59e0b;
+    --color-error: #ef4444;
+
+    /* Accent Defaults: Cyan */
+    --accent-color: #06b6d4;
+    --accent-hover: #0891b2;
+    --accent-subtle: rgba(6, 182, 212, 0.12);
+    --accent-glow: rgba(6, 182, 212, 0.3);
+    --accent-text: #22d3ee;
+  }
+
+  /* Themes */
+  [data-theme="midnight"] {
+    --bg-primary: #070a13;
+    --bg-surface: #0e1424;
+    --bg-surface-elevated: #151d34;
+    --bg-surface-hover: #1c2744;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --border-color: #1e293b;
+    --border-subtle: rgba(255, 255, 255, 0.08);
+  }
+
+  [data-theme="light"] {
+    --bg-primary: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-surface-elevated: #f1f5f9;
+    --bg-surface-hover: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --border-color: #e2e8f0;
+    --border-subtle: rgba(0, 0, 0, 0.08);
+  }
+
+  [data-theme="cyber"] {
+    --bg-primary: #04060c;
+    --bg-surface: #090e1b;
+    --bg-surface-elevated: #0f182d;
+    --bg-surface-hover: #162444;
+    --text-primary: #f0fdf4;
+    --text-secondary: #94a3b8;
+    --text-muted: #475569;
+    --border-color: #1a2744;
+    --border-subtle: rgba(6, 182, 212, 0.18);
+  }
+
+  [data-theme="nebula"] {
+    --bg-primary: #0a0614;
+    --bg-surface: #130d24;
+    --bg-surface-elevated: #1e1538;
+    --bg-surface-hover: #2a1d4e;
+    --text-primary: #faf5ff;
+    --text-secondary: #c084fc;
+    --text-muted: #9333ea;
+    --border-color: #2e1d52;
+    --border-subtle: rgba(168, 85, 247, 0.18);
+  }
+
+  [data-theme="matrix"] {
+    --bg-primary: #030a04;
+    --bg-surface: #071509;
+    --bg-surface-elevated: #0e2311;
+    --bg-surface-hover: #15341a;
+    --text-primary: #ecfdf5;
+    --text-secondary: #6ee7b7;
+    --text-muted: #34d399;
+    --border-color: #143819;
+    --border-subtle: rgba(16, 185, 129, 0.2);
+  }
+
+  [data-theme="ember"] {
+    --bg-primary: #0f0a07;
+    --bg-surface: #1a120c;
+    --bg-surface-elevated: #281c13;
+    --bg-surface-hover: #38271a;
+    --text-primary: #fff7ed;
+    --text-secondary: #fed7aa;
+    --text-muted: #fb923c;
+    --border-color: #382518;
+    --border-subtle: rgba(249, 115, 22, 0.18);
+  }
+
+  /* Accent Colors */
+  [data-accent="cyan"] {
+    --accent-color: #06b6d4;
+    --accent-hover: #0891b2;
+    --accent-subtle: rgba(6, 182, 212, 0.14);
+    --accent-glow: rgba(6, 182, 212, 0.3);
+    --accent-text: #06b6d4;
+  }
+
+  [data-accent="blue"] {
+    --accent-color: #3b82f6;
+    --accent-hover: #2563eb;
+    --accent-subtle: rgba(59, 130, 246, 0.14);
+    --accent-glow: rgba(59, 130, 246, 0.3);
+    --accent-text: #3b82f6;
+  }
+
+  [data-accent="purple"] {
+    --accent-color: #a855f7;
+    --accent-hover: #9333ea;
+    --accent-subtle: rgba(168, 85, 247, 0.14);
+    --accent-glow: rgba(168, 85, 247, 0.3);
+    --accent-text: #a855f7;
+  }
+
+  [data-accent="green"] {
+    --accent-color: #10b981;
+    --accent-hover: #059669;
+    --accent-subtle: rgba(16, 185, 129, 0.14);
+    --accent-glow: rgba(16, 185, 129, 0.3);
+    --accent-text: #10b981;
+  }
+
+  [data-accent="orange"] {
+    --accent-color: #f97316;
+    --accent-hover: #ea580c;
+    --accent-subtle: rgba(249, 115, 22, 0.14);
+    --accent-glow: rgba(249, 115, 22, 0.3);
+    --accent-text: #f97316;
+  }
+
+  [data-accent="pink"] {
+    --accent-color: #ec4899;
+    --accent-hover: #db2777;
+    --accent-subtle: rgba(236, 72, 153, 0.14);
+    --accent-glow: rgba(236, 72, 153, 0.3);
+    --accent-text: #ec4899;
   }
 
   body {
-    background-color: #07090e;
-    color: #e2e8f0;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow-x: hidden;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
-  /* Custom subtle dark scrollbar */
+  /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -26,41 +165,42 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: #1e293b;
+    background: var(--border-color);
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #334155;
+    background: var(--text-muted);
   }
 
-  .font-display {
-    font-family: 'Chakra Petch', sans-serif;
-  }
-
-  .font-mono-code {
-    font-family: 'JetBrains Mono', monospace;
+  /* Accessible focus indicators */
+  :focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
   }
 }
 
-/* Glassmorphic card styling */
-.glass-panel {
-  background: rgba(15, 20, 34, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
-.glass-panel-subtle {
-  background: rgba(23, 31, 51, 0.55);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+/* Keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-/* Subtle glow */
-.neon-glow-cyan {
-  box-shadow: 0 0 16px -4px rgba(6, 182, 212, 0.25);
-}
-
-.neon-glow-indigo {
-  box-shadow: 0 0 16px -4px rgba(99, 102, 241, 0.25);
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
 }

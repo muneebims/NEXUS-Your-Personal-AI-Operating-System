@@ -8,6 +8,7 @@ import { MemoryModal } from './components/MemoryModal.js';
 import { FilesModal } from './components/FilesModal.js';
 import { ToolsModal } from './components/ToolsModal.js';
 import { SettingsModal } from './components/SettingsModal.js';
+import { StatusModal } from './components/StatusModal.js';
 
 import {
   Conversation,
@@ -34,9 +35,9 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(defaultSettings);
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
 
-  // UI Navigation & View State
-  const [activeTab, setActiveTab] = useState<'chat' | 'memory' | 'files' | 'tools' | 'settings'>('chat');
-  const [showRightPanel, setShowRightPanel] = useState<boolean>(true);
+  // UI Navigation & View State - Agent drawer is closed by default for clean UX
+  const [showRightPanel, setShowRightPanel] = useState<boolean>(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [selectedInspectFile, setSelectedInspectFile] = useState<FileAttachment | null>(null);
 
@@ -45,6 +46,7 @@ export default function App() {
   const [isMemoriesOpen, setIsMemoriesOpen] = useState(false);
   const [isFilesOpen, setIsFilesOpen] = useState(false);
   const [isToolsOpen, setIsToolsOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
 
   // Agent execution tracking
   const [currentTask, setCurrentTask] = useState<string>('');
@@ -52,6 +54,14 @@ export default function App() {
 
   // Abort controller for streaming
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Real-time theme & accent synchronization
+  useEffect(() => {
+    const activeTheme = settings.theme || 'midnight';
+    const activeAccent = settings.accent || 'cyan';
+    document.documentElement.setAttribute('data-theme', activeTheme);
+    document.documentElement.setAttribute('data-accent', activeAccent);
+  }, [settings.theme, settings.accent]);
 
   // Initialize data on mount
   useEffect(() => {
@@ -78,7 +88,7 @@ export default function App() {
       // Create initial conversation
       const initialConv: Conversation = {
         id: `conv_${Date.now()}`,
-        title: 'Initial Session',
+        title: 'New Session',
         createdAt: Date.now(),
         updatedAt: Date.now(),
         messages: [],
@@ -94,7 +104,6 @@ export default function App() {
       .getStatus()
       .then((status) => {
         setSystemStatus(status);
-        // Default to Groq provider for main AI chat
         if (status.groqConfigured || status.openaiConfigured || !localStorage.getItem('nexus_settings_v1')) {
           setSettings((prev) => ({
             ...prev,
@@ -138,6 +147,7 @@ export default function App() {
     storage.setActiveConversationId(newConv.id);
     setCurrentTask('');
     setRecentAgentSteps([]);
+    setIsMobileSidebarOpen(false);
   };
 
   const handleDeleteConversation = (id: string) => {
@@ -213,7 +223,6 @@ export default function App() {
   };
 
   const handleQuickRemember = (content: string) => {
-    // Extract key idea from first line or sentence
     const firstLine = content.split('\n')[0].replace(/[#*`_]/g, '').trim();
     const key = firstLine.length > 50 ? `${firstLine.slice(0, 48)}...` : firstLine || 'Saved Insight';
     handleAddMemory(key, content.slice(0, 500), 'fact');
@@ -227,7 +236,6 @@ export default function App() {
   };
 
   const handleAskAboutFile = (file: FileAttachment) => {
-    // Inject prompt asking about the file
     handleSendMessage(`Please inspect the file "${file.name}" and provide a summary of its contents and key insights.`, [file]);
   };
 
@@ -238,14 +246,13 @@ export default function App() {
   };
 
   const handleToggleToolPermission = (toolName: string) => {
-    const current = settings.toolPermissions[toolName] !== false;
-    const updatedPermissions = {
+    const updated = {
       ...settings.toolPermissions,
-      [toolName]: !current,
+      [toolName]: settings.toolPermissions[toolName] === false ? true : false,
     };
     handleSaveSettings({
       ...settings,
-      toolPermissions: updatedPermissions,
+      toolPermissions: updated,
     });
   };
 
@@ -275,6 +282,11 @@ export default function App() {
     // Set current active task
     setCurrentTask(text || (newAttachments.length > 0 ? `Uploaded ${newAttachments[0].name}` : ''));
     setRecentAgentSteps([]);
+
+    // If agent mode is enabled, open the drawer automatically so user sees live execution
+    if (settings.agentMode) {
+      setShowRightPanel(true);
+    }
 
     const userMessageId = `msg_${Date.now()}_user`;
     const userMessage: Message = {
@@ -320,13 +332,29 @@ export default function App() {
     setIsStreaming(true);
     abortControllerRef.current = new AbortController();
 
+    // Prepare full conversation messages including the current user message
+    const fullConversationMessages = [...currentMessages, userMessage];
+    const messagesPayload = fullConversationMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+      attachments: m.attachments,
+    }));
+
+    // Filter active memories
+    const relevantMemories = settings.memoryEnabled ? memories : [];
+
+    // Filter tools based on permissions
+    const activeToolDefs = tools.filter(
+      (t) => settings.toolPermissions[t.name] !== false
+    );
+
     let accumulatedContent = '';
-    const activeToolCalls: ToolCall[] = [];
-    const activeSteps: AgentStep[] = [];
+    const collectedToolCalls: ToolCall[] = [];
+    const collectedAgentSteps: AgentStep[] = [];
 
     try {
       await apiClient.streamChat({
-        messages: updatedMessages.slice(0, -1), // send all messages up to current user message
+        messages: messagesPayload,
         provider: settings.provider,
         model:
           settings.provider === 'groq'
@@ -337,184 +365,160 @@ export default function App() {
         temperature: settings.temperature,
         maxTokens: settings.maxTokens,
         systemPrompt: settings.systemPrompt,
-        memoryItems: settings.memoryEnabled ? memories : [],
-        uploadedFiles: sessionFiles,
+        memoryItems: relevantMemories,
+        uploadedFiles: newAttachments.length > 0 ? newAttachments : undefined,
         agentMode: settings.agentMode,
         toolPermissions: settings.toolPermissions,
         signal: abortControllerRef.current.signal,
-
-        onChunk: (chunk) => {
+        onChunk: (chunk: string) => {
           accumulatedContent += chunk;
           setConversations((prevConvs) =>
-            prevConvs.map((conv) => {
-              if (conv.id !== updatedConversation.id) return conv;
+            prevConvs.map((c) => {
+              if (c.id !== updatedConversation.id) return c;
               return {
-                ...conv,
-                messages: conv.messages.map((m) =>
-                  m.id === assistantMessageId
-                    ? { ...m, content: accumulatedContent, isStreaming: true }
-                    : m
-                ),
+                ...c,
+                messages: c.messages.map((m) => {
+                  if (m.id !== assistantMessageId) return m;
+                  return {
+                    ...m,
+                    content: accumulatedContent,
+                    isStreaming: true,
+                  };
+                }),
               };
             })
           );
         },
-
-        onToolCall: (tc) => {
-          const newToolCall: ToolCall = {
-            id: tc.id,
-            name: tc.name,
-            arguments: tc.arguments,
-            status: 'running',
-            executedAt: Date.now(),
-          };
-          activeToolCalls.push(newToolCall);
-
+        onToolCall: (tc: ToolCall) => {
+          collectedToolCalls.push({ ...tc, status: 'running' });
           setConversations((prevConvs) =>
-            prevConvs.map((conv) => {
-              if (conv.id !== updatedConversation.id) return conv;
+            prevConvs.map((c) => {
+              if (c.id !== updatedConversation.id) return c;
               return {
-                ...conv,
-                messages: conv.messages.map((m) =>
-                  m.id === assistantMessageId
-                    ? { ...m, toolCalls: [...activeToolCalls] }
-                    : m
-                ),
+                ...c,
+                messages: c.messages.map((m) => {
+                  if (m.id !== assistantMessageId) return m;
+                  return {
+                    ...m,
+                    toolCalls: [...collectedToolCalls],
+                  };
+                }),
               };
             })
           );
         },
-
-        onToolResult: (tc) => {
-          const targetIndex = activeToolCalls.findIndex((t) => t.id === tc.id);
-          if (targetIndex >= 0) {
-            activeToolCalls[targetIndex] = {
-              ...activeToolCalls[targetIndex],
+        onToolResult: (tc: ToolCall) => {
+          const idx = collectedToolCalls.findIndex(
+            (item) => item.id === tc.id || item.name === tc.name
+          );
+          if (idx !== -1) {
+            collectedToolCalls[idx] = {
+              ...collectedToolCalls[idx],
+              status: tc.status === 'failed' ? 'failed' : 'completed',
               result: tc.result,
-              status: tc.status,
+              error: tc.error,
             };
           } else {
-            activeToolCalls.push(tc);
+            collectedToolCalls.push(tc);
           }
-
           setConversations((prevConvs) =>
-            prevConvs.map((conv) => {
-              if (conv.id !== updatedConversation.id) return conv;
+            prevConvs.map((c) => {
+              if (c.id !== updatedConversation.id) return c;
               return {
-                ...conv,
-                messages: conv.messages.map((m) =>
-                  m.id === assistantMessageId
-                    ? { ...m, toolCalls: [...activeToolCalls] }
-                    : m
-                ),
+                ...c,
+                messages: c.messages.map((m) => {
+                  if (m.id !== assistantMessageId) return m;
+                  return {
+                    ...m,
+                    toolCalls: [...collectedToolCalls],
+                  };
+                }),
               };
             })
           );
         },
-
-        onAgentStep: (step) => {
-          activeSteps.push(step);
-          setRecentAgentSteps([...activeSteps]);
-
+        onAgentStep: (step: AgentStep) => {
+          collectedAgentSteps.push(step);
+          setRecentAgentSteps([...collectedAgentSteps]);
           setConversations((prevConvs) =>
-            prevConvs.map((conv) => {
-              if (conv.id !== updatedConversation.id) return conv;
+            prevConvs.map((c) => {
+              if (c.id !== updatedConversation.id) return c;
               return {
-                ...conv,
-                messages: conv.messages.map((m) =>
-                  m.id === assistantMessageId
-                    ? { ...m, agentSteps: [...activeSteps] }
-                    : m
-                ),
+                ...c,
+                messages: c.messages.map((m) => {
+                  if (m.id !== assistantMessageId) return m;
+                  return {
+                    ...m,
+                    agentSteps: [...collectedAgentSteps],
+                  };
+                }),
               };
             })
           );
         },
-
-        onError: (err) => {
-          setIsStreaming(false);
-          const errorMsg = `\n\n[NEXUS Alert]: ${err}`;
-          accumulatedContent += errorMsg;
-
-          setConversations((prevConvs) => {
-            const finalConvs = prevConvs.map((conv) => {
-              if (conv.id !== updatedConversation.id) return conv;
-              return {
-                ...conv,
-                messages: conv.messages.map((m) =>
-                  m.id === assistantMessageId
-                    ? {
-                        ...m,
-                        content: accumulatedContent,
-                        isStreaming: false,
-                        error: err,
-                      }
-                    : m
-                ),
-              };
-            });
-            storage.saveConversations(finalConvs);
-            return finalConvs;
-          });
+        onError: (errMsg: string) => {
+          accumulatedContent += `\n\n*(Error: ${errMsg})*`;
         },
-
-        onDone: (fullText) => {
-          setIsStreaming(false);
-          const finalText = fullText || accumulatedContent || 'Response completed.';
-
-          setConversations((prevConvs) => {
-            const finalConvs = prevConvs.map((conv) => {
-              if (conv.id !== updatedConversation.id) return conv;
-              return {
-                ...conv,
-                updatedAt: Date.now(),
-                messages: conv.messages.map((m) =>
-                  m.id === assistantMessageId
-                    ? {
-                        ...m,
-                        content: finalText,
-                        isStreaming: false,
-                        toolCalls: activeToolCalls.length > 0 ? activeToolCalls : undefined,
-                        agentSteps: activeSteps.length > 0 ? activeSteps : undefined,
-                      }
-                    : m
-                ),
-              };
-            });
-            storage.saveConversations(finalConvs);
-            return finalConvs;
-          });
+        onDone: (fullText: string) => {
+          if (fullText) {
+            accumulatedContent = fullText;
+          }
         },
       });
     } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        accumulatedContent += `\n\n*(Connection error: ${err.message || 'Could not complete response'} )*`;
+      }
+    } finally {
       setIsStreaming(false);
-      console.error('Chat error:', err);
+      abortControllerRef.current = null;
+
+      // Final state persistence
+      setConversations((prevConvs) => {
+        const finalConvs = prevConvs.map((c) => {
+          if (c.id !== updatedConversation.id) return c;
+          return {
+            ...c,
+            updatedAt: Date.now(),
+            messages: c.messages.map((m) => {
+              if (m.id !== assistantMessageId) return m;
+              return {
+                ...m,
+                content: accumulatedContent,
+                isStreaming: false,
+                toolCalls: collectedToolCalls,
+                agentSteps: collectedAgentSteps,
+              };
+            }),
+          };
+        });
+        storage.saveConversations(finalConvs);
+        return finalConvs;
+      });
     }
   };
 
   // Regenerate last response
   const handleRegenerate = () => {
-    if (isStreaming || !activeConversation) return;
-    const msgs = activeConversation.messages;
-    if (msgs.length === 0) return;
+    const msgs = activeConversation?.messages || [];
+    if (msgs.length < 2) return;
 
     // Find last user message
-    let lastUserIndex = -1;
+    let lastUserIdx = -1;
     for (let i = msgs.length - 1; i >= 0; i--) {
       if (msgs[i].role === 'user') {
-        lastUserIndex = i;
+        lastUserIdx = i;
         break;
       }
     }
+    if (lastUserIdx === -1) return;
 
-    if (lastUserIndex === -1) return;
-
-    const lastUserMsg = msgs[lastUserIndex];
-    // Trim conversation up to the last user message
-    const trimmed = msgs.slice(0, lastUserIndex);
-    const updatedConv: Conversation = {
+    const lastUserMsg = msgs[lastUserIdx];
+    // Remove subsequent messages
+    const trimmedMsgs = msgs.slice(0, lastUserIdx);
+    const updatedConv = {
       ...activeConversation,
-      messages: trimmed,
+      messages: trimmedMsgs,
     };
     const updatedConvs = conversations.map((c) =>
       c.id === updatedConv.id ? updatedConv : c
@@ -529,8 +533,23 @@ export default function App() {
     (v) => v !== false
   ).length;
 
+  const activeModelDisplay =
+    settings.provider === 'groq'
+      ? settings.groqModel || 'openai/gpt-oss-20b'
+      : settings.provider === 'openai'
+      ? settings.openaiModel
+      : settings.geminiModel;
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#07090e] text-slate-100 antialiased font-sans">
+    <div
+      data-theme={settings.theme || 'midnight'}
+      data-accent={settings.accent || 'cyan'}
+      className="flex h-screen w-screen overflow-hidden antialiased font-sans transition-colors"
+      style={{
+        backgroundColor: 'var(--bg-primary)',
+        color: 'var(--text-primary)',
+      }}
+    >
       {/* Left Sidebar */}
       <Sidebar
         conversations={conversations}
@@ -540,39 +559,47 @@ export default function App() {
         onDeleteConversation={handleDeleteConversation}
         onRenameConversation={handleRenameConversation}
         onTogglePinConversation={handleTogglePinConversation}
-        activeTab={activeTab}
-        onChangeTab={(tab) => {
-          setActiveTab(tab);
-          if (tab === 'memory') setIsMemoriesOpen(true);
-          else if (tab === 'files') setIsFilesOpen(true);
-          else if (tab === 'tools') setIsToolsOpen(true);
-          else if (tab === 'settings') setIsSettingsOpen(true);
-        }}
+        onOpenMemory={() => setIsMemoriesOpen(true)}
+        onOpenFiles={() => setIsFilesOpen(true)}
+        onOpenTools={() => setIsToolsOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
         memoriesCount={memories.length}
         filesCount={sessionFiles.length}
+        activeToolsCount={activeToolsCount}
+        isOpenMobile={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
 
       {/* Main Center Area */}
-      <main className="flex-1 flex flex-col h-full min-w-0 bg-[#07090e] relative overflow-hidden">
+      <main
+        className="flex-1 flex flex-col h-full min-w-0 relative overflow-hidden transition-colors"
+        style={{
+          backgroundColor: 'var(--bg-primary)',
+        }}
+      >
         {/* Top Header */}
         <Header
           settings={settings}
           systemStatus={systemStatus}
           agentMode={settings.agentMode}
-          onToggleAgentMode={() =>
+          onToggleAgentMode={() => {
+            const nextMode = !settings.agentMode;
             handleSaveSettings({
               ...settings,
-              agentMode: !settings.agentMode,
-            })
-          }
+              agentMode: nextMode,
+            });
+            if (nextMode) {
+              setShowRightPanel(true);
+            }
+          }}
           showRightPanel={showRightPanel}
           onToggleRightPanel={() => setShowRightPanel(!showRightPanel)}
           onOpenSettings={() => setIsSettingsOpen(true)}
-          onOpenMemories={() => setIsMemoriesOpen(true)}
-          onOpenTools={() => setIsToolsOpen(true)}
+          onOpenStatus={() => setIsStatusOpen(true)}
           onNewChat={handleNewConversation}
-          memoriesCount={memories.length}
-          activeToolsCount={activeToolsCount}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+          isStreaming={isStreaming}
+          recentSteps={recentAgentSteps}
         />
 
         {/* Chat Thread Messages */}
@@ -584,11 +611,9 @@ export default function App() {
           onStopGeneration={handleStopGeneration}
           onRememberMessage={handleQuickRemember}
           onPromptPreset={(preset) => handleSendMessage(preset)}
-          activeModelName={
-            settings.provider === 'openai'
-              ? settings.openaiModel
-              : settings.geminiModel
-          }
+          onOpenFiles={() => setIsFilesOpen(true)}
+          onOpenTools={() => setIsToolsOpen(true)}
+          activeModelName={activeModelDisplay}
         />
 
         {/* Bottom Message Input */}
@@ -601,7 +626,7 @@ export default function App() {
         />
       </main>
 
-      {/* Right-Side Agent Inspector Panel */}
+      {/* Right-Side Agent Inspector Drawer */}
       {showRightPanel && (
         <AgentPanel
           currentTask={currentTask}
@@ -616,6 +641,7 @@ export default function App() {
             setSelectedInspectFile(f);
             setIsFilesOpen(true);
           }}
+          onClose={() => setShowRightPanel(false)}
         />
       )}
 
@@ -629,6 +655,13 @@ export default function App() {
           onClearConversations={handleClearAllConversations}
           onClearMemories={handleClearAllMemories}
           onClose={() => setIsSettingsOpen(false)}
+        />
+      )}
+
+      {isStatusOpen && (
+        <StatusModal
+          status={systemStatus}
+          onClose={() => setIsStatusOpen(false)}
         />
       )}
 

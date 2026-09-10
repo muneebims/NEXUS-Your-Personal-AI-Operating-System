@@ -37,7 +37,6 @@ export const ToolsModal: React.FC<ToolsModalProps> = ({
   const [execResult, setExecResult] = useState<any>(null);
   const [execError, setExecError] = useState<string | null>(null);
 
-  // Set default sample arguments when switching tools
   const handleSelectTool = (tool: NexusToolDefinition) => {
     setSelectedTool(tool);
     setExecResult(null);
@@ -88,42 +87,68 @@ export const ToolsModal: React.FC<ToolsModalProps> = ({
   const getToolIcon = (name: string) => {
     switch (name) {
       case 'calculator':
-        return <Calculator className="w-4 h-4 text-cyan-400" />;
+        return <Calculator className="w-4 h-4" style={{ color: 'var(--accent-color)' }} />;
       case 'date_time':
-        return <Clock className="w-4 h-4 text-indigo-400" />;
+        return <Clock className="w-4 h-4" style={{ color: 'var(--accent-color)' }} />;
       case 'file_reader':
       case 'file_writer':
-        return <FileText className="w-4 h-4 text-sky-400" />;
+        return <FileText className="w-4 h-4" style={{ color: 'var(--accent-color)' }} />;
       case 'code_execution':
-        return <Code2 className="w-4 h-4 text-amber-400" />;
+        return <Code2 className="w-4 h-4" style={{ color: 'var(--accent-color)' }} />;
       case 'web_search':
-        return <Search className="w-4 h-4 text-emerald-400" />;
+        return <Search className="w-4 h-4" style={{ color: 'var(--accent-color)' }} />;
       default:
-        return <Wrench className="w-4 h-4 text-cyan-400" />;
+        return <Wrench className="w-4 h-4" style={{ color: 'var(--accent-color)' }} />;
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-4xl bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[85vh]">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Tools Directory"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-4xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col h-[85vh] transition-colors"
+        style={{
+          backgroundColor: 'var(--bg-surface)',
+          borderColor: 'var(--border-color)',
+          color: 'var(--text-primary)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div
+          className="px-6 py-4 border-b flex items-center justify-between"
+          style={{ borderColor: 'var(--border-color)' }}
+        >
           <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-cyan-950/80 text-cyan-400 border border-cyan-800/60">
+            <div
+              className="p-2 rounded-xl border"
+              style={{
+                backgroundColor: 'var(--accent-subtle)',
+                borderColor: 'var(--accent-color)',
+                color: 'var(--accent-color)',
+              }}
+            >
               <Wrench className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-display font-bold text-white tracking-wide">
-                NEXUS Modular Tool Registry
+              <h2 className="text-base font-bold tracking-wide">
+                NEXUS Tools Directory
               </h2>
-              <p className="text-xs text-slate-400">
-                Extensible function calling system with security safeguards and live verification
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                Integrated function execution with safety controls and test runner
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1.5 rounded-lg hover:opacity-80 transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+            aria-label="Close Tools Directory"
           >
             <X className="w-5 h-5" />
           </button>
@@ -132,9 +157,18 @@ export const ToolsModal: React.FC<ToolsModalProps> = ({
         {/* Modal Body */}
         <div className="flex-1 flex overflow-hidden">
           {/* Tools List Column */}
-          <div className="w-80 border-r border-slate-800/80 flex flex-col bg-slate-950 p-3 space-y-2 overflow-y-auto">
-            <span className="text-[11px] font-mono text-slate-500 uppercase px-1">
-              Registered Tools ({tools.length})
+          <div
+            className="w-72 sm:w-80 border-r flex flex-col p-3 space-y-2 overflow-y-auto"
+            style={{
+              borderColor: 'var(--border-color)',
+              backgroundColor: 'var(--bg-surface)',
+            }}
+          >
+            <span
+              className="text-[11px] font-semibold uppercase px-1"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              Available Tools ({tools.length})
             </span>
 
             {tools.map((t) => {
@@ -145,44 +179,57 @@ export const ToolsModal: React.FC<ToolsModalProps> = ({
                 <div
                   key={t.name}
                   onClick={() => handleSelectTool(t)}
-                  className={`p-3 rounded-xl border text-xs cursor-pointer transition-all space-y-1.5 ${
-                    isSelected
-                      ? 'bg-cyan-950/40 border-cyan-500/50 shadow-[0_0_12px_-4px_rgba(6,182,212,0.2)]'
-                      : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'
-                  }`}
+                  className="p-3 rounded-xl border text-xs cursor-pointer transition-all space-y-1.5"
+                  style={{
+                    backgroundColor: isSelected
+                      ? 'var(--accent-subtle)'
+                      : 'var(--bg-surface-elevated)',
+                    borderColor: isSelected
+                      ? 'var(--accent-color)'
+                      : 'var(--border-color)',
+                  }}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {getToolIcon(t.name)}
-                      <span className="font-medium text-slate-200">{t.displayName}</span>
+                      <span className="font-medium">{t.displayName}</span>
                     </div>
 
                     {/* Enable / Disable toggle */}
                     <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         onToggleToolPermission(t.name);
                       }}
-                      className={`w-7 h-3.5 rounded-full p-0.5 transition-colors ${
-                        isEnabled ? 'bg-cyan-600' : 'bg-slate-700'
-                      }`}
+                      className="w-8 h-4 rounded-full p-0.5 transition-colors"
+                      style={{
+                        backgroundColor: isEnabled ? 'var(--accent-color)' : 'var(--border-color)',
+                      }}
                       title={isEnabled ? 'Tool enabled' : 'Tool disabled'}
+                      aria-label={`Toggle ${t.displayName}`}
                     >
                       <div
-                        className={`w-2.5 h-2.5 rounded-full bg-white transition-transform ${
-                          isEnabled ? 'translate-x-3.5' : 'translate-x-0'
+                        className={`w-3 h-3 rounded-full bg-white transition-transform ${
+                          isEnabled ? 'translate-x-4' : 'translate-x-0'
                         }`}
                       />
                     </button>
                   </div>
 
-                  <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">
+                  <p
+                    className="text-[11px] line-clamp-2 leading-relaxed"
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
                     {t.description}
                   </p>
 
-                  <div className="flex items-center justify-between text-[10px] font-mono pt-1">
-                    <span className="text-cyan-400">fn: {t.name}()</span>
-                    <span className="text-slate-500 uppercase">{t.category}</span>
+                  <div
+                    className="flex items-center justify-between text-[10px] font-mono pt-1"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    <span style={{ color: 'var(--accent-color)' }}>{t.name}()</span>
+                    <span className="uppercase">{t.category}</span>
                   </div>
                 </div>
               );
@@ -190,92 +237,151 @@ export const ToolsModal: React.FC<ToolsModalProps> = ({
           </div>
 
           {/* Tool Details & Test Runner Column */}
-          <div className="flex-1 flex flex-col bg-slate-900/30 overflow-y-auto p-5 space-y-5">
+          <div
+            className="flex-1 flex flex-col overflow-y-auto p-5 space-y-5"
+            style={{ backgroundColor: 'var(--bg-primary)' }}
+          >
             {selectedTool ? (
               <>
                 {/* Tool Meta Card */}
-                <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                <div
+                  className="p-4 rounded-xl border space-y-2"
+                  style={{
+                    backgroundColor: 'var(--bg-surface)',
+                    borderColor: 'var(--border-color)',
+                  }}
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       {getToolIcon(selectedTool.name)}
-                      <h3 className="font-display font-semibold text-sm text-white">
+                      <h3 className="font-semibold text-sm">
                         {selectedTool.displayName}
                       </h3>
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800/60">
+                      <span
+                        className="text-[10px] font-mono px-2 py-0.5 rounded border"
+                        style={{
+                          backgroundColor: 'var(--accent-subtle)',
+                          borderColor: 'var(--accent-color)',
+                          color: 'var(--accent-color)',
+                        }}
+                      >
                         {selectedTool.name}
                       </span>
                     </div>
-                    <span className="text-xs text-emerald-400 flex items-center gap-1">
-                      <Shield className="w-3.5 h-3.5" /> Safeguarded Sandbox
+                    <span
+                      className="text-xs font-medium flex items-center gap-1"
+                      style={{ color: 'var(--color-success)' }}
+                    >
+                      <Shield className="w-3.5 h-3.5" /> Safeguarded
                     </span>
                   </div>
-                  <p className="text-xs text-slate-300 leading-relaxed">
+
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                     {selectedTool.description}
                   </p>
                 </div>
 
-                {/* Parameter Schema */}
-                <div className="space-y-1.5">
-                  <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider font-mono">
-                    Parameters Schema (JSON Schema)
-                  </span>
-                  <pre className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-cyan-300 overflow-x-auto">
-                    {JSON.stringify(selectedTool.parameters, null, 2)}
-                  </pre>
-                </div>
-
-                {/* Interactive Tool Test Runner */}
-                <div className="space-y-3 pt-2">
+                {/* Live Test Interactive Panel */}
+                <div
+                  className="p-4 rounded-xl border space-y-3 flex-1 flex flex-col"
+                  style={{
+                    backgroundColor: 'var(--bg-surface)',
+                    borderColor: 'var(--border-color)',
+                  }}
+                >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider font-mono flex items-center gap-1.5">
-                      <Terminal className="w-3.5 h-3.5 text-cyan-400" />
-                      Live Tool Tester
+                    <span className="font-semibold text-xs flex items-center gap-1.5">
+                      <Terminal className="w-3.5 h-3.5" style={{ color: 'var(--accent-color)' }} />
+                      Interactive Tool Tester
                     </span>
                     <button
+                      type="button"
                       onClick={handleRunTest}
                       disabled={executing}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-medium transition-colors shadow-sm cursor-pointer disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50 cursor-pointer shadow-sm"
+                      style={{ backgroundColor: 'var(--accent-color)' }}
                     >
                       <Play className="w-3 h-3 fill-current" />
-                      <span>{executing ? 'Executing...' : 'Run Tool Test'}</span>
+                      <span>{executing ? 'Executing...' : 'Run Test'}</span>
                     </button>
                   </div>
 
-                  <textarea
-                    rows={4}
-                    value={testArgs}
-                    onChange={(e) => setTestArgs(e.target.value)}
-                    className="w-full p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-500"
-                    placeholder="JSON test arguments..."
-                  />
+                  {/* Input JSON args */}
+                  <div className="space-y-1 flex-1 flex flex-col">
+                    <label className="text-[11px] font-medium" style={{ color: 'var(--text-secondary)' }}>
+                      JSON Parameters:
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={testArgs}
+                      onChange={(e) => setTestArgs(e.target.value)}
+                      className="w-full p-2.5 rounded-lg border font-mono text-xs outline-none flex-1"
+                      style={{
+                        backgroundColor: 'var(--bg-primary)',
+                        borderColor: 'var(--border-color)',
+                        color: 'var(--text-primary)',
+                      }}
+                    />
+                  </div>
 
-                  {/* Test Error */}
-                  {execError && (
-                    <div className="p-3 rounded-xl bg-rose-950/50 border border-rose-800 text-xs text-rose-300 flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                      <span className="font-mono">{execError}</span>
-                    </div>
-                  )}
-
-                  {/* Test Result */}
-                  {execResult && (
-                    <div className="space-y-1.5">
-                      <span className="text-[11px] font-mono text-emerald-400 flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Execution Output
+                  {/* Output Preview */}
+                  {(execResult || execError) && (
+                    <div className="space-y-1 pt-2 border-t" style={{ borderColor: 'var(--border-color)' }}>
+                      <span className="text-[11px] font-medium block" style={{ color: 'var(--text-secondary)' }}>
+                        Execution Result:
                       </span>
-                      <pre className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-emerald-300 overflow-x-auto max-h-48">
-                        {JSON.stringify(execResult.result, null, 2)}
-                      </pre>
+                      {execError && (
+                        <div
+                          className="p-2.5 rounded-lg border text-xs flex items-center gap-2"
+                          style={{
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderColor: 'var(--color-error)',
+                            color: 'var(--color-error)',
+                          }}
+                        >
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          <span>{execError}</span>
+                        </div>
+                      )}
+                      {execResult && (
+                        <pre
+                          className="p-3 rounded-lg border font-mono text-xs overflow-x-auto text-emerald-400"
+                          style={{
+                            backgroundColor: 'var(--bg-primary)',
+                            borderColor: 'var(--border-color)',
+                          }}
+                        >
+                          {JSON.stringify(execResult, null, 2)}
+                        </pre>
+                      )}
                     </div>
                   )}
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-slate-500 text-xs">
-                Select a tool to inspect and test.
+              <div className="flex-1 flex items-center justify-center text-xs" style={{ color: 'var(--text-muted)' }}>
+                Select a tool to inspect and test
               </div>
             )}
           </div>
+        </div>
+
+        {/* Modal Footer */}
+        <div
+          className="px-6 py-3 border-t flex justify-end"
+          style={{
+            backgroundColor: 'var(--bg-surface-elevated)',
+            borderColor: 'var(--border-color)',
+          }}
+        >
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl text-xs font-medium text-white transition-opacity hover:opacity-90"
+            style={{ backgroundColor: 'var(--accent-color)' }}
+          >
+            Close Directory
+          </button>
         </div>
       </div>
     </div>

@@ -17,7 +17,8 @@ export const defaultSettings: AppSettings = {
   agentMode: false,
   maxIterations: 5,
   systemPrompt: 'You are NEXUS, an advanced modular personal AI operating system. Provide clear, precise, and well-structured answers. When tools are enabled, use them to calculate, inspect files, or verify facts.',
-  theme: 'dark',
+  theme: 'midnight',
+  accent: 'cyan',
   toolPermissions: {
     calculator: true,
     date_time: true,
@@ -151,7 +152,10 @@ export const storage = {
     try {
       const data = localStorage.getItem(SETTINGS_KEY);
       if (!data) return defaultSettings;
-      return { ...defaultSettings, ...JSON.parse(data) };
+      const parsed = JSON.parse(data);
+      const theme = parsed.theme === 'dark' ? 'midnight' : (parsed.theme || 'midnight');
+      const accent = parsed.accent || 'cyan';
+      return { ...defaultSettings, ...parsed, theme, accent };
     } catch {
       return defaultSettings;
     }
